@@ -6,7 +6,7 @@ package.name = jarvisapp
 package.domain = org.test
 
 source.dir = .
-source.include_exts = py,png,jpg,jpeg,kv,atlas
+source.include_exts = py,png,jpg,jpeg,kv,atlas,ttf
 
 version = 3.0
 
@@ -21,6 +21,8 @@ android.api = 33
 android.minapi = 21
 android.ndk = 25b
 android.archs = arm64-v8a
+
+android.accept_sdk_license = True
 
 [buildozer]
 
