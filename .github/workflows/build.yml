@@ -19,6 +19,17 @@ jobs:
       - name: Get JARVIS Code
         uses: actions/checkout@v4
 
+      - name: Download Telugu Font
+        run: |
+          mkdir -p fonts
+          curl -L --fail -o /tmp/NotoSansTelugu.zip \
+            https://github.com/notofonts/telugu/releases/download/NotoSansTelugu-v2.005/NotoSansTelugu-v2.005.zip
+          mkdir -p /tmp/noto-font
+          unzip -q /tmp/NotoSansTelugu.zip -d /tmp/noto-font
+          FONT_PATH="$(find /tmp/noto-font -type f -name 'NotoSansTelugu-Regular.ttf' -print -quit)"
+          test -n "$FONT_PATH"
+          cp "$FONT_PATH" fonts/NotoSansTelugu-Regular.ttf
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
