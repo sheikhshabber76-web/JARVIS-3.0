@@ -3,6 +3,9 @@ import os
 
 from kivy.app import App
 from kivy.metrics import dp, sp
+from kivy.core.window import Window
+from kivy.clock import Clock
+
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView
@@ -10,6 +13,7 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.popup import Popup
+
 from kivy.graphics import Color, RoundedRectangle
 
 
@@ -17,6 +21,12 @@ class JarvisApp(App):
 
     def build(self):
         self.title = "JARVIS 3.0"
+
+        # Keyboard adjustment
+        try:
+            Window.softinput_mode = "resize"
+        except Exception:
+            pass
 
         self.themes = {
             "Neon Blue": (0.0, 0.65, 1, 1),
@@ -30,9 +40,6 @@ class JarvisApp(App):
         self.blue = self.themes[self.theme_name]
         self.bg = (0.005, 0.018, 0.045, 1)
 
-        self.messages = []
-
-        # Telugu font
         self.font_path = os.path.join(
             os.path.dirname(__file__),
             "fonts",
@@ -56,7 +63,6 @@ class JarvisApp(App):
             )
 
         root.bind(pos=self.update_bg, size=self.update_bg)
-        self.root_layout = root
 
         # HEADER
         header = BoxLayout(
@@ -94,11 +100,12 @@ class JarvisApp(App):
 
         root.add_widget(header)
 
-        # CHAT AREA
+        # EMPTY CHAT AREA
         self.chat = GridLayout(
             cols=1,
             spacing=dp(12),
             size_hint_y=None,
+            size_hint_x=1,
             padding=dp(8)
         )
 
@@ -106,15 +113,13 @@ class JarvisApp(App):
             minimum_height=self.chat.setter("height")
         )
 
-        scroll = ScrollView()
-        scroll.add_widget(self.chat)
-        root.add_widget(scroll)
-
-        self.add_message(
-            "JARVIS",
-            "నమస్కారం బాస్! నేను JARVIS 3.0.\n"
-            "మీకు ఏ విధంగా సహాయం చేయగలను?"
+        self.scroll = ScrollView(
+            do_scroll_x=False,
+            bar_width=dp(3)
         )
+
+        self.scroll.add_widget(self.chat)
+        root.add_widget(self.scroll)
 
         # MESSAGE BAR
         message_bar = BoxLayout(
@@ -139,7 +144,8 @@ class JarvisApp(App):
             foreground_color=(1, 1, 1, 1),
             background_color=(0.01, 0.04, 0.10, 1),
             cursor_color=self.blue,
-            padding=[dp(12), dp(15)]
+            padding=[dp(12), dp(15)],
+            input_type="text"
         )
 
         if self.font_path:
@@ -156,10 +162,11 @@ class JarvisApp(App):
             width=dp(50),
             background_color=(0.01, 0.12, 0.25, 1)
         )
+
         mic.bind(
             on_release=lambda x: self.notice(
                 "Voice",
-                "Telugu voice recognition will be connected later."
+                "Voice recognition will be connected later."
             )
         )
 
@@ -170,6 +177,7 @@ class JarvisApp(App):
             width=dp(48),
             background_color=(0.0, 0.35, 0.95, 1)
         )
+
         send.bind(on_release=self.send_message)
 
         for item in [plus, self.input, mic, send]:
@@ -177,7 +185,7 @@ class JarvisApp(App):
 
         root.add_widget(message_bar)
 
-        # FEATURE BUTTONS
+        # MAIN BUTTONS
         features = [
             ("▦  Calculator", "Calculator"),
             ("◎  Web", "Web"),
@@ -231,11 +239,14 @@ class JarvisApp(App):
         self.background.pos = widget.pos
         self.background.size = widget.size
 
+    # CHAT MESSAGE
     def add_message(self, sender, message):
+
         label = Label(
             text=f"[b][color=00BFFF]{sender}[/color][/b]\n{message}",
             markup=True,
             size_hint_y=None,
+            size_hint_x=1,
             halign="left",
             valign="middle",
             font_size=sp(16),
@@ -245,38 +256,52 @@ class JarvisApp(App):
         if self.font_path:
             label.font_name = self.font_path
 
-        label.bind(
-            texture_size=lambda obj, size:
-            setattr(
-                obj,
-                "size",
-                (self.chat.width, size[1] + dp(20))
+        def update_label(instance, *args):
+            available_width = max(
+                instance.width - dp(24),
+                dp(100)
             )
-        )
 
-        label.text_size = (
-            self.chat.width - dp(25),
-            None
+            instance.text_size = (available_width, None)
+
+            instance.texture_update()
+
+            instance.height = (
+                instance.texture_size[1] + dp(20)
+            )
+
+        label.bind(
+            width=update_label,
+            texture_size=update_label
         )
 
         self.chat.add_widget(label)
 
+        Clock.schedule_once(
+            lambda dt: setattr(self.scroll, "scroll_y", 0),
+            0.1
+        )
+
+    # SEND MESSAGE
     def send_message(self, *args):
+
         message = self.input.text.strip()
 
         if not message:
             return
 
         self.add_message("YOU", message)
+
         self.input.text = ""
 
         self.add_message(
             "JARVIS",
-            "మీ సందేశం అందింది బాస్! AI connection "
-            "తర్వాతి దశలో ఏర్పాటు చేస్తాం."
+            "Message received. AI connection will be added in the next step."
         )
 
+    # POPUPS
     def show_popup(self, title, options):
+
         content = BoxLayout(
             orientation="vertical",
             spacing=dp(5),
@@ -290,6 +315,7 @@ class JarvisApp(App):
         )
 
         for option in options:
+
             btn = Button(
                 text=option,
                 size_hint_y=None,
@@ -311,19 +337,14 @@ class JarvisApp(App):
             "Camera",
             "Photos / Gallery",
             "Files",
-            "Plugins",
-            "Think harder",
             "Close"
         ])
 
     def show_menu(self):
         self.show_popup("More Options", [
             "Share",
-            "Unpin",
-            "Add to project",
-            "Uploaded files",
             "Find in chat",
-            "Add to home",
+            "Uploaded files",
             "Archive",
             "Delete",
             "Close"
@@ -340,6 +361,7 @@ class JarvisApp(App):
         ])
 
     def popup_action(self, value, popup):
+
         popup.dismiss()
 
         if value == "Clear Chat":
@@ -357,25 +379,31 @@ class JarvisApp(App):
         elif value != "Close":
             self.feature(value)
 
+    # THEME
     def change_theme(self, name):
+
         self.theme_name = name
         self.blue = self.themes[name]
+
+        self.input.cursor_color = self.blue
 
         self.notice(
             "Theme",
             name + " theme selected."
         )
 
+    # CLEAR CHAT
     def clear_chat(self):
         self.chat.clear_widgets()
-        self.add_message(
-            "JARVIS",
-            "కొత్త Chat ప్రారంభమైంది బాస్!"
-        )
 
+    # MAIN FEATURES
     def feature(self, name):
+
         if name == "Clear Chat":
             self.clear_chat()
+
+        elif name == "Themes":
+            self.show_themes()
 
         else:
             self.notice(
@@ -383,7 +411,9 @@ class JarvisApp(App):
                 name + " feature will be connected in a later step."
             )
 
+    # NOTICE
     def notice(self, title, message):
+
         content = Label(
             text=message,
             halign="center",
@@ -402,4 +432,3 @@ class JarvisApp(App):
 
 if __name__ == "__main__":
     JarvisApp().run()
-
