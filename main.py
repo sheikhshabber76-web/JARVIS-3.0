@@ -22,7 +22,6 @@ class JarvisApp(App):
     def build(self):
         self.title = "JARVIS 3.0"
 
-        # Keyboard adjustment
         try:
             Window.softinput_mode = "resize"
         except Exception:
@@ -41,13 +40,16 @@ class JarvisApp(App):
         self.bg = (0.005, 0.018, 0.045, 1)
 
         self.font_path = os.path.join(
-            os.path.dirname(__file__),
+            os.path.dirname(os.path.abspath(__file__)),
             "fonts",
             "NotoSansTelugu-Regular.ttf"
         )
 
-        if not os.path.exists(self.font_path):
+        if not os.path.isfile(self.font_path):
+            print("JARVIS ERROR: Telugu font file not found")
             self.font_path = None
+        else:
+            print("JARVIS: Telugu font file found")
 
         root = BoxLayout(
             orientation="vertical",
@@ -100,7 +102,7 @@ class JarvisApp(App):
 
         root.add_widget(header)
 
-        # EMPTY CHAT AREA
+        # CHAT AREA - STARTS EMPTY
         self.chat = GridLayout(
             cols=1,
             spacing=dp(12),
@@ -166,7 +168,7 @@ class JarvisApp(App):
         mic.bind(
             on_release=lambda x: self.notice(
                 "Voice",
-                "Voice recognition will be connected later."
+                "Voice recognition is not connected yet."
             )
         )
 
@@ -185,7 +187,7 @@ class JarvisApp(App):
 
         root.add_widget(message_bar)
 
-        # MAIN BUTTONS
+        # MAIN BUTTONS - SAME DESIGN
         features = [
             ("▦  Calculator", "Calculator"),
             ("◎  Web", "Web"),
@@ -239,6 +241,19 @@ class JarvisApp(App):
         self.background.pos = widget.pos
         self.background.size = widget.size
 
+    # APPLY TELUGU SCRIPT TO LABELS
+    def prepare_label(self, label):
+        if self.font_path:
+            label.font_name = self.font_path
+
+        try:
+            if hasattr(label, "font_script_name"):
+                label.font_script_name = "Telu"
+        except Exception as error:
+            print("Script setting:", error)
+
+        return label
+
     # CHAT MESSAGE
     def add_message(self, sender, message):
 
@@ -253,8 +268,7 @@ class JarvisApp(App):
             padding=(dp(12), dp(10))
         )
 
-        if self.font_path:
-            label.font_name = self.font_path
+        self.prepare_label(label)
 
         def update_label(instance, *args):
             available_width = max(
@@ -263,23 +277,19 @@ class JarvisApp(App):
             )
 
             instance.text_size = (available_width, None)
-
             instance.texture_update()
 
             instance.height = (
                 instance.texture_size[1] + dp(20)
             )
 
-        label.bind(
-            width=update_label,
-            texture_size=update_label
-        )
+        label.bind(width=update_label)
 
         self.chat.add_widget(label)
 
         Clock.schedule_once(
             lambda dt: setattr(self.scroll, "scroll_y", 0),
-            0.1
+            0.15
         )
 
     # SEND MESSAGE
@@ -291,13 +301,10 @@ class JarvisApp(App):
             return
 
         self.add_message("YOU", message)
-
         self.input.text = ""
 
-        self.add_message(
-            "JARVIS",
-            "Message received. AI connection will be added in the next step."
-        )
+        # AI is not connected yet.
+        # Do not show a fake repeated AI answer.
 
     # POPUPS
     def show_popup(self, title, options):
@@ -315,7 +322,6 @@ class JarvisApp(App):
         )
 
         for option in options:
-
             btn = Button(
                 text=option,
                 size_hint_y=None,
@@ -384,7 +390,6 @@ class JarvisApp(App):
 
         self.theme_name = name
         self.blue = self.themes[name]
-
         self.input.cursor_color = self.blue
 
         self.notice(
@@ -408,7 +413,7 @@ class JarvisApp(App):
         else:
             self.notice(
                 name,
-                name + " feature will be connected in a later step."
+                name + " is not connected yet."
             )
 
     # NOTICE
@@ -420,8 +425,7 @@ class JarvisApp(App):
             valign="middle"
         )
 
-        if self.font_path:
-            content.font_name = self.font_path
+        self.prepare_label(content)
 
         Popup(
             title=title,
