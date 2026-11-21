@@ -1,0 +1,79 @@
+
+name: JARVIS 3.0 - Validated APK Build
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install System Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git zip unzip \
+            autoconf automake libtool \
+            pkg-config zlib1g-dev \
+            libncurses5-dev libncursesw5-dev \
+            cmake libffi-dev libssl-dev \
+            build-essential
+
+      - name: Install Build Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install buildozer cython==0.29.37
+
+      - name: Validate Project
+        run: |
+          set -e
+
+          echo "Checking required files..."
+          test -f main.py
+          test -f buildozer.spec
+          test -f requirements.txt
+
+          echo "Checking Python syntax..."
+          python -m py_compile main.py
+
+          echo "Checking buildozer configuration..."
+          grep -q "source.dir = ." buildozer.spec
+          grep -q "requirements = python3,kivy" buildozer.spec
+
+          echo "Checking project structure..."
+          ls -la
+
+          echo "VALIDATION PASSED"
+
+      - name: Build APK
+        run: |
+          buildozer android debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: JARVIS-3.0-APK
+          path: bin/*.apk
+          if-no-files-found: error
